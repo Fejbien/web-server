@@ -3,24 +3,18 @@
 #include <string>
 #include <unistd.h>
 #include <fstream>
+#include <filesystem>
 
 #include "header_type.h"
 #include "request_type.h"
 #include "header_converter.h"
+#include "response_type.h"
+#include "response_type_converter.h"
 
 class ClientHandler
 {
 private:
-    static const std::string HTTP_STANDARD;
-    static const std::string HTTP_RESPOND_OK;
-    static const std::string HTTP_RESPOND_NOT_FOUND;
-    static const std::string HTTP_RESPOND_ENDING_SINGLE;
-    static const std::string HTTP_RESPOND_ENDING_DOUBLE;
-
-    static const std::string HTTP_FULL_RESPONSE_ERROR;
-
     static void send_response(int client_fd, const std::string &response_string);
-    static std::string create_response_with_body(const std::string &status, const std::string &body);
 
     static void handle_get_request(const request &req, int client_fd);
     static void handle_post_request(const request &req, int client_fd);

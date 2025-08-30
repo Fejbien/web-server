@@ -9,11 +9,13 @@
 				"-o",
 				"build/server",
 				"server.cpp",
-				"src/header_type.cpp",
+				"src/header_type_converter.cpp",
+				"src/response_type_converter.cpp",
 				"src/header_converter.cpp",
 				"src/client_handler.cpp",
 				"-Iinclude",
-				"-pthread"
+				"-pthread",
+				"-std=c++20",
 			],
 			"problemMatcher": [
 				"$gcc"

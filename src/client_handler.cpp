@@ -1,49 +1,33 @@
 #include "client_handler.h"
-
-const std::string ClientHandler::HTTP_STANDARD = "HTTP/1.1 ";
-const std::string ClientHandler::HTTP_RESPOND_OK = "200 OK";
-const std::string ClientHandler::HTTP_RESPOND_NOT_FOUND = "404 Not Found";
-const std::string ClientHandler::HTTP_RESPOND_ENDING_SINGLE = "\r\n";
-const std::string ClientHandler::HTTP_RESPOND_ENDING_DOUBLE = "\r\n\r\n";
-
-const std::string ClientHandler::HTTP_FULL_RESPONSE_ERROR = HTTP_STANDARD + HTTP_RESPOND_NOT_FOUND + HTTP_RESPOND_ENDING_DOUBLE;
+#include <filesystem>
 
 void ClientHandler::send_response(int client_fd, const std::string &response_string)
 {
     send(client_fd, response_string.c_str(), response_string.size(), 0);
 }
 
-std::string ClientHandler::create_response_with_body(const std::string &status, const std::string &body)
-{
-    std::string response = HTTP_STANDARD + status + HTTP_RESPOND_ENDING_SINGLE;
-    response += "Content-Type: text/plain" + HTTP_RESPOND_ENDING_SINGLE;
-    response += "Content-Length: " + std::to_string(body.size()) + HTTP_RESPOND_ENDING_DOUBLE;
-    response += body;
-    return response;
-}
-
 void ClientHandler::handle_get_request(const request &req, int client_fd)
 {
     std::string sendingString;
-    std::cout << req.path << "\n";
-    if (req.path == "/" || req.path == "/index.html")
+    // // std::cout << req.path << "\n";
+    // if (req.path == "/" || req.path == "/index.html")
+    // {
+    //     ResponseType response = {200, {{"Content-Type", "text/html"}}, ""};
+    //     send_response(client_fd, ResponseTypeConverter::toResponse(response));
+    //     return;
+    // }
+    if (req.path.substr(0, 5).compare("/echo") == 0)
     {
-        sendingString = create_response_with_body(HTTP_RESPOND_OK, "");
-        send_response(client_fd, sendingString);
-        return;
-    }
-    else if (req.path.substr(0, 5).compare("/echo") == 0)
-    {
-        sendingString = create_response_with_body(HTTP_RESPOND_OK, req.path.substr(6));
-        send_response(client_fd, sendingString);
+        ResponseType response = {200, {{"Content-Type", "text/plain"}}, req.path.substr(6)};
+        send_response(client_fd, ResponseTypeConverter::toResponse(response));
         return;
     }
     else if (req.path.substr(0, 12).compare("/user-agent") == 0)
     {
         std::string user_agent = HeaderConverter::get_header_value(req.buffer, HeaderType::USER_AGENT);
 
-        sendingString = create_response_with_body(HTTP_RESPOND_OK, user_agent);
-        send_response(client_fd, sendingString);
+        ResponseType response = {200, {{"Content-Type", "text/plain"}}, user_agent};
+        send_response(client_fd, ResponseTypeConverter::toResponse(response));
         return;
     }
     else if (req.path.substr(0, 6).compare("/files") == 0)
@@ -51,7 +35,8 @@ void ClientHandler::handle_get_request(const request &req, int client_fd)
         std::string file_path = "storage/" + req.path.substr(7);
         if (file_path.find("..") != std::string::npos)
         {
-            send_response(client_fd, HTTP_FULL_RESPONSE_ERROR);
+            ResponseType response = {400, {{"Content-Type", "text/plain"}}, "Invalid file path"};
+            send_response(client_fd, ResponseTypeConverter::toResponse(response));
             std::cerr << "Invalid file path: " << file_path << std::endl;
             return;
         }
@@ -63,32 +48,53 @@ void ClientHandler::handle_get_request(const request &req, int client_fd)
             long file_size = ftell(file);
             fseek(file, 0, SEEK_SET);
 
-            sendingString = HTTP_STANDARD + HTTP_RESPOND_OK + HTTP_RESPOND_ENDING_SINGLE;
-            sendingString += "Content-Type: application/octet-stream" + HTTP_RESPOND_ENDING_SINGLE;
-            sendingString += "Content-Length: " + std::to_string(file_size) + HTTP_RESPOND_ENDING_DOUBLE;
+            ResponseType response = {200, {{"Content-Type", "application/octet-stream"}}, ""};
+            response.headers["Content-Length"] = std::to_string(file_size);
 
             char *file_buffer = new char[file_size];
             fread(file_buffer, 1, file_size, file);
-            sendingString.append(file_buffer, file_size);
+            response.body.append(file_buffer, file_size);
             delete[] file_buffer;
-            fclose(file);
 
-            send_response(client_fd, sendingString);
+            send_response(client_fd, ResponseTypeConverter::toResponse(response));
+            fclose(file);
         }
         else
         {
-            send_response(client_fd, HTTP_FULL_RESPONSE_ERROR);
+            ResponseType response = {404, {{"Content-Type", "text/plain"}}, "File not found"};
+            send_response(client_fd, ResponseTypeConverter::toResponse(response));
             std::cerr << "File not found: " << file_path << std::endl;
             return;
         }
     }
-    else
+
+    // public doesnt have "/" bcs of the request path always contains it
+    std::string path = req.path;
+    if (req.path == "/")
+        path = "/index.html";
+
+    std::string file_path = "public" + path;
+    std::ifstream file(file_path);
+    if (file.good())
     {
-        send_response(client_fd, HTTP_FULL_RESPONSE_ERROR);
+        std::string body((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        file.close();
+
+        std::string content_type = "text/plain";
+        if (file_path.ends_with(".html"))
+            content_type = "text/html";
+        else if (file_path.ends_with(".css"))
+            content_type = "text/css";
+        else if (file_path.ends_with(".js"))
+            content_type = "application/javascript";
+
+        ResponseType response = {200, {{"Content-Type", content_type}}, body};
+        send_response(client_fd, ResponseTypeConverter::toResponse(response));
         return;
     }
 
-    send_response(client_fd, HTTP_FULL_RESPONSE_ERROR);
+    ResponseType response = {400, {{"Content-Type", "text/plain"}}, "Bad Request"};
+    send_response(client_fd, ResponseTypeConverter::toResponse(response));
 }
 
 void ClientHandler::handle_post_request(const request &req, int client_fd)
@@ -104,20 +110,23 @@ void ClientHandler::handle_post_request(const request &req, int client_fd)
             file << body;
             file.close();
 
-            std::string sendingString = create_response_with_body("201 Created", body);
-            send_response(client_fd, sendingString);
+            ResponseType response = {201, {{"Content-Type", "text/plain"}}, body};
+            std::string response_string = ResponseTypeConverter::toResponse(response);
+            send_response(client_fd, response_string);
             return;
         }
         else
         {
-            send_response(client_fd, HTTP_FULL_RESPONSE_ERROR);
+            ResponseType response = {500, {{"Content-Type", "text/plain"}}, "Failed to create file"};
+            send_response(client_fd, ResponseTypeConverter::toResponse(response));
             std::cerr << "Failed to create file: " << file_path << std::endl;
             return;
         }
     }
     else
     {
-        send_response(client_fd, HTTP_FULL_RESPONSE_ERROR);
+        ResponseType response = {404, {{"Content-Type", "text/plain"}}, "Not Found"};
+        send_response(client_fd, ResponseTypeConverter::toResponse(response));
         return;
     }
 }
@@ -151,6 +160,12 @@ void ClientHandler::handle_client(int client_fd)
             req.method = HeaderConverter::recognize_header_request(buffer);
             req.path = HeaderConverter::get_header_value(buffer, req.method);
             req.body = get_request_body(req);
+
+            // if (HeaderConverter::get_header_value(buffer, "Connection: ").compare("close") == 0)
+            // {
+            //     close(client_fd);
+            //     return;
+            // }
 
             switch (req.method)
             {

@@ -1,0 +1,19 @@
+      body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+      .bold-text {
+        font-weight: bold;
+        font-size: 2em;
+        text-align: center;
+      }
+      .small-text {
+        font-size: 1em;
+        color: #555;
+        margin-top: 10px;
+        text-align: center;
+      }
