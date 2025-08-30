@@ -68,22 +68,22 @@ HeaderType HeaderConverter::recognize_header_request(const char *buffer)
     header = header.substr(0, header.find(" "));
     if (header == "GET")
     {
-        std::cout << "Recognized GET request\n";
+        // std::cout << "Recognized GET request\n";
         return HeaderType::GET;
     }
     else if (header == "PUT")
     {
-        std::cout << "Recognized PUT request\n";
+        // std::cout << "Recognized PUT request\n";
         return HeaderType::PUT;
     }
     else if (header == "POST")
     {
-        std::cout << "Recognized POST request\n";
+        // std::cout << "Recognized POST request\n";
         return HeaderType::POST;
     }
     else if (header == "DELETE")
     {
-        std::cout << "Recognized DELETE request\n";
+        // std::cout << "Recognized DELETE request\n";
         return HeaderType::DELETE;
     }
     else

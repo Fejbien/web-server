@@ -1,0 +1,24 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build-server",
+			"type": "shell",
+			"command": "g++",
+			"args": [
+				"-o",
+				"build/server",
+				"server.cpp",
+				"src/header_type.cpp",
+				"src/header_converter.cpp",
+				"src/client_handler.cpp",
+				"-Iinclude",
+				"-pthread"
+			],
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		}
+	]
+}
