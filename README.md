@@ -1,8 +1,10 @@
-# Web server
+# Simple web server
+
+C++ 20 was used
 
 ## Compile the project:
 
-g++ -o build/server server.cpp src/header_type.cpp src/header_converter.cpp src/client_handler.cpp -Iinclude -pthread
+g++ -o build/server server.cpp src/header_type_converter.cpp src/header_type.cpp src/response_type_converter.cpp src/header_converter.cpp src/client_handler.cpp -Iinclude -pthread -std=c++20
 
 ## Current capabilities
 
