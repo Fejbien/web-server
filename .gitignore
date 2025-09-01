@@ -40,4 +40,5 @@
 /x64
 /.vs
 
-/storage/*
+storage/*
+!/storage/.gitkeep
