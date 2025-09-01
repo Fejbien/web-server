@@ -2,13 +2,34 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Hello World!</title>
+    <title>Hosted Files</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div class="bold-text">Hello World!</div>
-    <div class="small-text">This HTML was served by server</div>
-    <div id="clock" class="small-text"></div>
+    <header>Hosted Files</header>
+    <main>
+      <div class="left">
+        <h2>Currently Hosted Files</h2>
+        <ul class="file-list" id="file-list">
+          <!-- js will fetch files -->
+        </ul>
+      </div>
+      <div class="right">
+        <h2>Upload a File</h2>
+        <form
+          class="upload-form"
+          action="/files"
+          method="POST"
+          enctype="multipart/form-data"
+        >
+          <input type="file" name="file" required />
+          <button type="submit">Upload</button>
+        </form>
+      </div>
+    </main>
+    <footer>
+      <span id="clock"></span>
+    </footer>
+    <script src="js.js"></script>
   </body>
-  <script src="js.js"></script>
 </html>

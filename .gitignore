@@ -39,3 +39,5 @@
 /server
 /x64
 /.vs
+
+/storage/*

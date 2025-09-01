@@ -40,6 +40,8 @@ std::string HeaderConverter::get_header_value(const char *buffer, HeaderType hea
         return get_header_value(buffer, "Connection: ");
     case HeaderType::USER_AGENT:
         return get_header_value(buffer, "User-Agent: ");
+    case HeaderType::CONTENT_TYPE:
+        return get_header_value(buffer, "Content-Type: ");
     default:
         return "";
     }
@@ -88,4 +90,19 @@ HeaderType HeaderConverter::recognize_header_request(const char *buffer)
     }
     else
         throw std::invalid_argument("Unknown header type");
+}
+
+std::string HeaderConverter::get_boundary_value(const char *buffer)
+{
+    std::string content_type = get_header_value(buffer, HeaderType::CONTENT_TYPE);
+    std::string boundary_prefix = "boundary=";
+    size_t boundary_start = content_type.find(boundary_prefix);
+    if (boundary_start != std::string::npos)
+    {
+        size_t boundary_end = content_type.find(";", boundary_start);
+        if (boundary_end == std::string::npos)
+            boundary_end = content_type.length();
+        return content_type.substr(boundary_start + boundary_prefix.length(), boundary_end - boundary_start - boundary_prefix.length());
+    }
+    return std::string();
 }

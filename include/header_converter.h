@@ -12,4 +12,6 @@ public:
     static std::string get_header_value(const char *buffer, HeaderType header);
     static std::string get_header_value(const char *buffer, const char *header);
     static HeaderType recognize_header_request(const char *buffer);
+
+    static std::string get_boundary_value(const char *buffer);
 };

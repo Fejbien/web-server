@@ -8,4 +8,5 @@ enum class HeaderType
     DELETE,
     CONNECTION,
     USER_AGENT,
+    CONTENT_TYPE
 };
