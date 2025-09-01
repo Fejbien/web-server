@@ -13,11 +13,11 @@ g++ -o build/server server.cpp src/header_type_converter.cpp src/header_type.cpp
 ```
 
 ## Project Structure
-storage/ — contains uploaded files
-public/ — contains static files and webpages served by the server
-src/ — source code files
-include/ — header files
-build/ — compiled binary output
+ - storage/ — contains uploaded files
+ - public/ — contains static files and webpages served by the server
+ - src/ — source code files
+ - include/ — header files
+ - build/ — compiled binary output
 
 ## Capabilities
  - Handles GET and POST requests
