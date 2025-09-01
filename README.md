@@ -1,23 +1,30 @@
-# Simple web server
+# Simple HTTP Server
 
-C++ 20 was used
+A lightweight C++ HTTP server that supports file uploads, downloads, and serving static webpages.  
+Designed for experimenting with networking concepts and basic web functionality.
 
-## Compile the project:
+---
 
+## Compile the Project
+To build the server, run:
+
+```bash
 g++ -o build/server server.cpp src/header_type_converter.cpp src/header_type.cpp src/response_type_converter.cpp src/header_converter.cpp src/client_handler.cpp -Iinclude -pthread -std=c++20
+```
 
-## Current project
+## Project Structure
+storage/ — contains uploaded files
+public/ — contains static files and webpages served by the server
+src/ — source code files
+include/ — header files
+build/ — compiled binary output
 
-Server hosts a simple website that is allowing to upload files to a server and allows to download any file that is currently stored in storage folder. Websites that are exposed from server are being store in public folder
+## Capabilities
+ - Handles GET and POST requests
+ - Supports persistent connections
+ - Echo endpoint - returns the contents of a GET request in the response body
+ - Files endpoint - supports file upload (POST) and file download (GET)
+ - Serves complete webpages from the public folder
 
-## Current capabilities
-
-- Handles GET and POST requests
-- Persistent connection
-- Echo endpoint which returns the latter of get reuqest as the body
-- Files endpoint supporting GET and POST requests
-- Support for serving full webpages
-
-### Add later:
-
-- Compression
+TODO:
+ - Compression support
