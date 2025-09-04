@@ -13,8 +13,8 @@ CONCURRENCY_LEVELS = [1, 10, 50, 100]
 # servers to test
 SERVERS = {
     "C++ server": ("127.0.0.1", 4221, "/files"),
-    "Express server": ("127.0.0.1", 4222, "/files"),
-    "Flask server": ("127.0.0.1", 4223, "/files"),
+    # "Express server": ("127.0.0.1", 4222, "/files"),
+    # "Flask server": ("127.0.0.1", 4223, "/files"),
 }
 # open each server before running the benchmark
 # else just comment out the server you don't want to test :D

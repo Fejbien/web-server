@@ -53,3 +53,5 @@ Benchmark for uploading a test file (PDF, 11.3 MB) with different numbers of c
 | Flask server   | 100         | 35.22 | 5.68    | 200     | 0      |
 
 Tested on a MacBook Pro 2020 M2, 16GB
+
+Additionally, the server was tested with 2000 uploads. The fastest performance was achieved at 10 concurrent connections, maintaining a throughput above 90 req/s. And commenting out cout logging of "client connected" after each request, the performance further improved to 100.92 req/s at 10 concurrent connections.
