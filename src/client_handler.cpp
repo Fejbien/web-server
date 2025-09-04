@@ -76,7 +76,7 @@ void ClientHandler::handle_get_request(const request &req, int client_fd)
     else if (decoded_path.substr(0, 6).compare("/files") == 0)
     {
         std::string file_path = "storage/" + decoded_path.substr(7);
-        std::cout << "Requested file: " << file_path << std::endl;
+        // std::cout << "Requested file: " << file_path << std::endl;
         if (file_path.find("..") != std::string::npos)
         {
             ResponseType response = {400, {{"Content-Type", "text/plain"}}, "Invalid file path"};
@@ -119,7 +119,7 @@ void ClientHandler::handle_get_request(const request &req, int client_fd)
             files += entry.path().string().substr(8) + "\n";
         }
 
-        std::cout << files << std::endl;
+        // std::cout << files << std::endl;
 
         ResponseType response = {200, {{"Content-Type", "text/plain"}}, files};
         send_response(client_fd, ResponseTypeConverter::toResponse(response));
@@ -157,96 +157,110 @@ void ClientHandler::handle_get_request(const request &req, int client_fd)
 
 void ClientHandler::handle_post_request(const request &req, int client_fd)
 {
-    if (req.path.substr(0, 6).compare("/files") == 0)
-    {
-        // Parse headers
-        std::string boundary = HeaderConverter::get_boundary_value(req.buffer);
-        std::string boundary_marker = "--" + boundary;
-        std::string boundary_end = boundary_marker + "--";
-
-        bool in_file = false;
-        std::ofstream file;
-        std::string leftover;
-        std::string buffer_acc = req.body;
-
-        auto process_chunk = [&](const std::string &chunk)
-        {
-            size_t pos = 0;
-
-            while (true)
-            {
-                if (!in_file)
-                {
-                    size_t boundary_pos = chunk.find(boundary_marker, pos);
-                    if (boundary_pos == std::string::npos)
-                        return;
-
-                    // Skip boundary line
-                    size_t header_start = boundary_pos + boundary_marker.size() + 2;
-                    size_t header_end = chunk.find("\r\n\r\n", header_start);
-                    if (header_end == std::string::npos)
-                        return;
-
-                    std::string headers = chunk.substr(header_start, header_end - header_start);
-
-                    // Extract filename
-                    std::smatch match;
-                    std::regex filename_regex("filename=\"([^\"]+)\"");
-                    if (std::regex_search(headers, match, filename_regex))
-                    {
-                        std::string filename = match.str(1);
-                        std::string file_path = "storage/" + filename;
-                        file.open(file_path, std::ios::binary);
-                        in_file = true;
-                    }
-
-                    pos = header_end + 4;
-                }
-                else
-                {
-                    size_t boundary_pos = chunk.find(boundary_marker, pos);
-                    if (boundary_pos != std::string::npos)
-                    {
-                        file.write(chunk.data() + pos, boundary_pos - pos - 2);
-                        file.close();
-                        in_file = false;
-                        return; // file finished
-                    }
-                    else
-                    {
-                        file.write(chunk.data() + pos, chunk.size() - pos);
-                        return;
-                    }
-                }
-            }
-        };
-
-        // process already read body
-        if (!buffer_acc.empty())
-            process_chunk(buffer_acc);
-
-        // keep streaming
-        char buf[8192];
-        ssize_t bytes_read;
-        while ((bytes_read = recv(client_fd, buf, sizeof(buf), 0)) > 0)
-        {
-            std::string chunk(buf, bytes_read);
-            process_chunk(chunk);
-
-            if (!in_file)
-                break;
-        }
-
-        // Respond
-        ResponseType response = {201, {{"Content-Type", "text/plain"}}, "File uploaded!"};
-        send_response(client_fd, ResponseTypeConverter::toResponse(response));
-    }
-    else
+    if (req.path.substr(0, 6) != "/files")
     {
         ResponseType response = {404, {{"Content-Type", "text/plain"}}, "Not Found"};
         send_response(client_fd, ResponseTypeConverter::toResponse(response));
         return;
     }
+
+    std::string boundary = HeaderConverter::get_boundary_value(req.buffer);
+    if (boundary.empty())
+    {
+        ResponseType response = {400, {{"Content-Type", "text/plain"}}, "No boundary in multipart"};
+        send_response(client_fd, ResponseTypeConverter::toResponse(response));
+        return;
+    }
+
+    std::string boundary_marker = "--" + boundary;
+    std::string boundary_end = boundary_marker + "--";
+
+    size_t content_length = 0;
+    std::string cl_str = HeaderConverter::get_header_value(req.buffer, "Content-Length: ");
+    if (!cl_str.empty())
+        content_length = std::stoul(cl_str);
+
+    size_t total_read = req.body.size();
+    std::string buffer_acc = req.body; // start with already read body
+    std::ofstream file;
+    bool in_file = false;
+    std::string leftover;
+
+    auto process_chunk = [&](const std::string &chunk) -> size_t
+    {
+        size_t pos = 0;
+        while (true)
+        {
+            if (!in_file)
+            {
+                size_t bpos = chunk.find(boundary_marker, pos);
+                if (bpos == std::string::npos)
+                    return pos;
+                size_t header_start = bpos + boundary_marker.size() + 2; // skip CRLF
+                size_t header_end = chunk.find("\r\n\r\n", header_start);
+                if (header_end == std::string::npos)
+                    return pos; // incomplete header
+
+                std::string headers = chunk.substr(header_start, header_end - header_start);
+                std::smatch match;
+                std::regex filename_regex("filename=\"([^\"]+)\"");
+                if (std::regex_search(headers, match, filename_regex))
+                {
+                    std::string filename = match.str(1);
+                    std::string file_path = "storage/" + filename;
+                    file.open(file_path, std::ios::binary);
+                    in_file = true;
+                }
+                pos = header_end + 4;
+            }
+            else
+            {
+                size_t bpos = chunk.find(boundary_marker, pos);
+                if (bpos != std::string::npos)
+                {
+                    file.write(chunk.data() + pos, bpos - pos - 2);
+                    file.close();
+                    in_file = false;
+                    pos = bpos;
+                }
+                else
+                {
+                    file.write(chunk.data() + pos, chunk.size() - pos);
+                    pos = chunk.size();
+                    break;
+                }
+            }
+        }
+        return pos;
+    };
+
+    if (!buffer_acc.empty())
+    {
+        size_t consumed = process_chunk(buffer_acc);
+        leftover = buffer_acc.substr(consumed);
+    }
+
+    char buf[65536];
+    while (total_read < content_length)
+    {
+        ssize_t bytes = recv(client_fd, buf, sizeof(buf), 0);
+        if (bytes <= 0)
+            break;
+        total_read += bytes;
+
+        std::string chunk = leftover + std::string(buf, bytes);
+        size_t consumed = process_chunk(chunk);
+        leftover = chunk.substr(consumed);
+    }
+
+    if (in_file)
+    {
+        file.close();
+        in_file = false;
+    }
+
+    ResponseType response = {201, {{"Content-Type", "text/plain"}}, "File uploaded!"};
+    send_response(client_fd, ResponseTypeConverter::toResponse(response));
 }
 
 std::string ClientHandler::get_request_body(const request &req)
@@ -275,7 +289,7 @@ void ClientHandler::handle_client(int client_fd)
         {
             request req;
             req.buffer = buffer;
-            std::cout << "Received request: " << buffer << std::endl;
+            // std::cout << "Received request: " << buffer << std::endl;
             req.method = HeaderConverter::recognize_header_request(buffer);
             req.path = HeaderConverter::get_header_value(buffer, req.method);
             req.body = get_request_body(req);
@@ -314,8 +328,7 @@ void ClientHandler::handle_client(int client_fd)
                 break;
             }
 
-            // Other error
-            std::cerr << "recv failed\n";
+            std::cerr << "recv failed: " << strerror(errno) << "\n";
             break;
         }
     }
